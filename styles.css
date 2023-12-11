@@ -1,0 +1,20 @@
+header {
+  font-style: bold;
+  font-size: larger;
+  font-family: Helvetica;
+}
+
+.skill-bar {
+    height: 20px;
+    max-width: 60%;
+    background-color: #ddd;
+    margin-bottom: 5px;
+  }
+  
+  #health-bar {
+    background-color: red;
+    width:auto;
+  }
+  #attack-bar { background-color: blue;width:auto;}
+  #speed-bar { background-color: green;width:auto;}
+  
