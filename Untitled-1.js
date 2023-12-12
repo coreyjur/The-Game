@@ -1,6 +1,7 @@
 
+//The Game
 
-// Get the canvas element and its context
+//Canvas and Frame Count
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const framesPerSecond = 6;
@@ -13,8 +14,6 @@ const world = {
 };
 
 let isAttackKeyPressed = false;
-
-// Define the character
 let character = {
     x: canvas.width / 2,
     y: canvas.height / 2,
@@ -26,30 +25,15 @@ let character = {
     speed: 2,
     attackCooldown: 0,
     attackAnimationTime: 0,
-    attackCooldownTime: 10,
+    attackCooldownTime: 60,
     attackRange: 100,
+    xp:0,
 };
-
-
-// Update function to redraw the canvas
-// Define an array to store the positions of stationary dark spots
 const stationaryDarkSpots = [];
-
-// Populate the array with fixed positions for stationary dark spots
-
-
-for (let i = 0; i < 10; i++) {
-    const spotX = Math.random() * world.width;
-    const spotY = Math.random() * world.height;
-    const spotSize = Math.random() * 20 + 10; // Random size between 10 and 30
-
-    stationaryDarkSpots.push({ x: spotX, y: spotY, size: spotSize+10 });
-}
-    function calculateDistance(point1, point2) {
-        const dx = point1.x - point2.x;
-        const dy = point1.y - point2.y;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
+let orbs = [];
+const blotches = [];
+let blotchDensity= 100;
+let blotchSize=50;
 // Update function to redraw the canvas
 function update() {
     --character.attackCooldownTime
@@ -59,6 +43,7 @@ function update() {
     handlePlayerAttack();
     moveEnemies();
     handleEnemyBehavior();
+    handleOrbCollection();
     document.getElementById('health-bar').style.width = `${character.health / 400 * 100}%`;
     document.getElementById('attack-bar').style.width = `${character.attack / 20 * 100}%`;
     document.getElementById('speed-bar').style.width = `${character.speed / 8 * 100}%`;
@@ -75,7 +60,7 @@ function update() {
     }
     enemies = enemies.filter(enemy => enemy.health > 0);
     // Call the spawnNewEnemy function every 7 seconds
-    if (frameCount % (700 * framesPerSecond) === 0) {
+    if (frameCount % (2 * framesPerSecond) === 0) {
         spawnNewEnemy();
     }
     
@@ -120,9 +105,17 @@ function update() {
     ctx.stroke();
 
     // Draw the character centered on the canvas
-    ctx.fillStyle = '#00F'; // Blue color
+    ctx.fillStyle = '#9fe0ff'; // Blue color
     ctx.fillRect(character.x - character.width / 2 - cameraX, character.y - character.height / 2 - cameraY, character.width, character.height);
-
+    //Draw Orbs
+    for (const orb of orbs) {
+        ctx.beginPath();
+        ctx.arc(orb.x - cameraX, orb.y - cameraY, orb.radius, 0, 2 * Math.PI);
+        ctx.fillStyle = orb.color;
+        ctx.fill();
+        ctx.closePath();
+    }
+    
     // Draw enemies
     for (const enemy of enemies) {
         if (enemy.type === 'stationary') {
@@ -132,30 +125,47 @@ function update() {
         } else if (enemy.type === 'moving') {
             // Draw moving enemy
             ctx.fillStyle = 'pink';
+            enemy.health = 50;
             ctx.fillRect(enemy.x - cameraX, enemy.y - cameraY, 20, 20); // Adjust size as needed
         }
     }
+   
     for (let i = enemies.length - 1; i >= 0; i--) {
         const enemy = enemies[i];
         const distanceToEnemy = calculateDistance(character, enemy);
-
-        if (distanceToEnemy <= character.attackRange) {
-            if(isAttackKeyPressed=True){// Deal damage to the enemy
-                enemy.health -= character.attack * 7;
-                
-            }
+        const xpGained = Math.floor(Math.random() * 3) + 1;
+        if (distanceToEnemy <= character.attackRange && isAttackKeyPressed<=true) {
+            // Deal damage to the enemy
+                enemy.health -= character.attack * 7; 
+        }
             // Check if the enemy is dead
-            if (enemy.health <= 0) {
+        if (enemy.health <= 0) {
                 // Remove the dead enemy from the array
                 enemies.splice(i, 1);
-            }
-
+                // Spawn a random colored orb drop
+                spawnRandomOrbDrop(enemy.x, enemy.y);
+                character.xp += xpGained;
+        }
+   
+        
             // Apply cooldown to the player's attack
             character.attackCooldown = character.attackCooldownTime;
         }
-
+        isAttackKeyPressed = false;
     }
+// Populate the array with fixed positions for stationary dark spots
+for (let i = 0; i < 10; i++) {
+    const spotX = Math.random() * world.width;
+    const spotY = Math.random() * world.height;
+    const spotSize = Math.random() * 20 + 40; // Random size between 10 and 30
+
+    stationaryDarkSpots.push({ x: spotX, y: spotY, size: spotSize+10 });
 }
+    function calculateDistance(point1, point2) {
+        const dx = point1.x - point2.x;
+        const dy = point1.y - point2.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
 
 // Populate the array with fixed positions for stationary dark spots
 for (let i = 0; i < 300; i++) {
@@ -166,10 +176,7 @@ for (let i = 0; i < 300; i++) {
     stationaryDarkSpots.push({ x: spotX, y: spotY, size: spotSize });
 }
 
-// Define the blotches array to store their positions and colors
-const blotches = [];
-let blotchDensity= 100;
-let blotchSize=50;
+
 // Populate the blotches array with fixed positions and colors
 for (let x = 0; x < world.width; x += blotchSize) {
     for (let y = 0; y < world.height; y += blotchSize) {
@@ -180,7 +187,38 @@ for (let x = 0; x < world.width; x += blotchSize) {
         }
     }
 }
+//Random orbs
+function spawnRandomOrbDrop(x, y) {
+    const orbColors = ['#FF0000', '#00FF00', '#0000FF']; // Red, Green, Blue
+    const randomColor = orbColors[Math.floor(Math.random() * orbColors.length)];
 
+    orbs.push({ x, y, color: randomColor, radius: 5 })
+}
+function handleOrbCollection() {
+    for (let i = orbs.length - 1; i >= 0; i--) {
+        const orb = orbs[i];
+        const distanceToOrb = calculateDistance(character, orb);
+
+        if (distanceToOrb <= 10) {
+            // Increase the corresponding stat based on orb color
+            switch (orb.color) {
+                case '#FF0000': // Red
+                    character.attack += 1;
+                    break;
+                case '#00FF00': // Green
+                    character.speed += 1;
+                    break;
+                case '#0000FF': // Blue
+                    character.health += 10;
+                    break;
+                // Add more cases for additional colors/stats
+            }
+
+            // Remove the collected orb from the array
+            orbs.splice(i, 1);
+        }
+    }
+}
 // Function to draw the blotches from the precalculated array, adjusting for camera position
 function drawStationaryBlotches(cameraX, cameraY) {
     for (const blotch of blotches) {
@@ -368,11 +406,6 @@ function handlePlayerAttack() {
         showDamageIndicator(character.x, character.y, 'blue', 100);
         // Reset cooldown to attackAnimationTime + attackCooldownTime
         character.attackCooldown = character.attackAnimationTime + character.attackCooldownTime;
-
-        // Calculate the position of the attack endpoint relative to the player
-        const attackEndpointX = character.x + Math.cos(character.rotation) * character.attackRange;
-        const attackEndpointY = character.y + Math.sin(character.rotation) * character.attackRange;
-
         
     // Reset the flag to false at the end of the function
     character.attackCooldown = character.attackCooldownTime;
@@ -491,8 +524,8 @@ function spawnRandomEnemies(numEnemies) {
 // Function to spawn new enemies periodically
 function spawnNewEnemy() {
     // Generate a random position for the new enemy within the specified range
-    const spawnRange = 1500;
-    const minDistance = 700;
+    const spawnRange = 1000;
+    const minDistance = 100;
     const angle = Math.random() * 2 * Math.PI;
     const distance = minDistance + Math.random() * (spawnRange - minDistance);
     const enemyX = character.x + Math.cos(angle) * distance;
